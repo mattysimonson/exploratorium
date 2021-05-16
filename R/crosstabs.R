@@ -175,7 +175,6 @@ survtable <- function(s,
                    wrap = T){
 
   if(is.null(grouping_vars)){
-    print("Here I am")
     s <- s %>% mutate(temp_var := 1)
     grouping_vars <- "temp_var"
   }
