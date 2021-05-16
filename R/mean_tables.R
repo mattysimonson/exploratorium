@@ -13,8 +13,11 @@
 #' @export
 #'
 #' @examples
-#' load("data/ca_school_svy.rda")
-#' ca_school_svy %>% simple_binary_tab(winner, vartype = "ci")
+#' data(ca_school_tbl_svy)
+#'
+#' ca_school_tbl_svy %>% simple_binary_tab(year.round.sch, vartype = "ci")
+#'
+#' rm(ca_school_tbl_svy)
 simple_binary_tab <- function(dat, binary_outcome, na.rm = T,
                               vartype = NULL){
   dat %>% summarise(mean = pct(survey_mean({{binary_outcome}},
@@ -22,23 +25,21 @@ simple_binary_tab <- function(dat, binary_outcome, na.rm = T,
                                            vartype = vartype)))
 }
 
-
 #' Create crosstab of means and confidence intervals for numeric outcome(s)
 #'
 #' Takes in a `tbl_svy` built with the srvyr package, one or more grouping
 # variables (no quotes needed), one or more outcomes
 #'
-#' @param .data A `tbl_svy` object created with the srvyr package.
-#' @param .named_outcome_vec A named character vector. The elements are the
-#' existing names of numeric or logical columns to take the means of. The names
-#' are what they should be renamed as.
-#' @param .grp_var_1 Name of factor or character column to group by
-#' @param ... Option additional factor or character columns to group by
-#' @param .na.rm A logical indicating whether to drop NAs from output table
-#' @param .displayN A logical indicating whether to append the number of
+#' @param s A `tbl_svy` object created with the srvyr package.
+#' @param outcome_vars A character vector of outcome variable names. The elements are the
+#' existing names of numeric or logical columns to take the means of. If it is
+#' a named vector, the names are what they variables should be renamed as.
+#' @param grouping_vars Name of factor or character column to group by
+#' @param na.rm A logical indicating whether to drop NAs from output table
+#' @param displayN A logical indicating whether to append the number of
 #' observations to each group's name. Ignored if there are zero or multiple
 #' grouping variables.
-#' @param .proportions A logical indicating whether the outcomes are
+#' @param prop.to.pct A logical indicating whether the outcome_vars are
 #' proportions. If `TRUE`, convert estimates to percents and truncate
 #' confidence intervals at 0 and 100
 #' @param wrap A logical indicating to return html code that will print
@@ -50,37 +51,63 @@ simple_binary_tab <- function(dat, binary_outcome, na.rm = T,
 #' @export
 #'
 #' @examples
-#' data(ca_school_svy)
+#' data(ca_school_tbl_svy)
 #'
-#' named_outcome_vec <- c(`percent tested` ="pcttest",
-#'                        `free and reduced price lunch`= "meals",
-#'                        `English language learners` = "ell")
-#' # no grouping variables
-#' survestimates(ca_school_svy, named_outcome_vec)
+#' # one outcome, no groups
+#' surv_mean_table(ca_school_tbl_svy, "qual.teach.prop")
+#'
+#' # multiple outcomes, no groups
+#'
+#' outcome_vec <- c("eng.lang.learn.prop", "qual.teach.prop", "new.stu.prop")
+#' surv_mean_table(ca_school_tbl_svy, outcome_vec)
+#'
+#' # if you plan to rename these outcome variables, create a named vector
+#'   # and let the function rename them to avoid repetition
+#'
+#' named_outcome_vec <- c(`Fully qualified teachers` ="qual.teach.prop",
+#'                       `New students`= "new.stu.prop",
+#'                       `English language learners` = "eng.lang.learn.prop")
+#'
+#' surv_mean_table(ca_school_tbl_svy, named_outcome_vec)
+#'
+#' # prepare for copying or export using wrap (i.e., knitr::knit)
+#' surv_mean_table(ca_school_tbl_svy, named_outcome_vec, wrap = T)
 #'
 #' # one grouping varible
-#' survestimates(ca_school_svy, named_outcome_vec, comp.imp, stype, winner)
+#' surv_mean_table(ca_school_tbl_svy, named_outcome_vec, "poverty")
 #'
-#' # multiple grouping variables
-#' survestimates(ca_school_svy, named_outcome_vec, comp.imp)
-survestimates <- function(.s, .named_outcome_vec,
-                           .grp_var_1 = NULL, ...,
-                           .na.rm = T, .displayN = T, .proportions = F,
-                           .wrap = F){
-  new_outcome_names <- names(.named_outcome_vec)
-  .s <- .s %>%
-    group_by({{.grp_var_1}}) %>%
-    group_by(..., .add = T) %>%
-    rename({{.named_outcome_vec}})
+#' # one grouping varible, N's not appended to names
+#' surv_mean_table(ca_school_tbl_svy, named_outcome_vec, "poverty", displayN = F)
+#'
+#' # multiple grouping variables (note that N's can't be appended)
+#' surv_mean_table(ca_school_tbl_svy, named_outcome_vec, c("poverty", "size"))
+#'
+#' # turn all columns into percentages and trim the CIs and 0 and 100
+#' surv_mean_table(ca_school_tbl_svy, named_outcome_vec, c("poverty", "size"),
+#'                  prop.to.pct =T)
+#' rm(ca_school_tbl_svy)
+surv_mean_table <- function(s, outcome_vars,
+                           grouping_vars = NULL,
+                           na.rm = T, displayN = T, prop.to.pct = F,
+                           wrap = F){
 
-  out <- summarise(.s, across(all_of(new_outcome_names),
-                     ~survey_mean(., na.rm=T, vartype = "ci"),
+  if(!is.null(names(outcome_vars))){
+    s <- s %>%
+      rename({{outcome_vars}})
+    outcome_vars <- names(outcome_vars)
+  }
+
+  s <- s %>%
+    group_by(across(all_of(grouping_vars)))
+
+  out <- summarise(s, across(all_of(outcome_vars),
+                     ~srvyr::survey_mean(., na.rm=T, vartype = "ci"),
                      .names = "{.col}"),
-                   n = unweighted(n()))
+                   n = srvyr::unweighted(n()))
 
   # rename in order to make it easy to select which columns to pivot
   out <- out %>%
-    rename_with(~stringr::str_c(.,"__est"), all_of(new_outcome_names)) %>%
+    rename_with(~stringr::str_c(.,"__est"), all_of(outcome_vars)) %>%
     rename_with(~stringr::str_replace(.,"_low","__low"), ends_with("_low")) %>%
     rename_with(~stringr::str_replace(.,"_upp","__upp"), ends_with("_upp"))
 
@@ -89,7 +116,7 @@ survestimates <- function(.s, .named_outcome_vec,
                  names_to = c("outcome", "stat")) %>%
     tidyr::pivot_wider(names_from = "stat", values_from = "value")
 
-  if(.proportions){
+  if(prop.to.pct){
     # turn everything into percentages and truncate CIs at 0 and 100
     out <- out %>%
       mutate(est = 100*est, low = 100*low, upp = 100*upp) %>%
@@ -97,21 +124,15 @@ survestimates <- function(.s, .named_outcome_vec,
              upp = if_else(upp>100, 100, upp))
   }
 
-  if(.na.rm){
+  if(na.rm){
     out <- na.omit(out)
   }
 
-  # create a column for the raw unweighted number of obs in each group
- # out <- out %>% left_join(summarise(.s, n = unweighted(n())))
   # if there are multiple grouping variables, do not attempt to
   # paste N into the group names
-  if(names(out)[2]!="n"){
-    .displayN  <- F
-  }
-
-  # paste N into the group names
-  if(.displayN==T){
+  if(displayN==T & length(grouping_vars)==1){
     # determined if group is ordered so we can restore this after
+    .grp_var_1 <- sym(grouping_vars)
     ord <- out %>% select({{.grp_var_1}}) %>% pull() %>% is.ordered()
 
     out <- out %>%
@@ -122,17 +143,16 @@ survestimates <- function(.s, .named_outcome_vec,
       select(-n)
   }
 
-  if(.wrap){
-    out <- wrap(out)
+  if(wrap){
+    out <- exploratorium::wrap(out)
   }
   out
 }
 
-
-
 #' Plot multiple outcomes and confidence intervals efficiently
 #'
-#' @param tab A table
+#' @param tab A table with columns named est, upp, and low
+#' (for point estimate, upper CI bound, and lower CI bound)
 #' @param y_var Name of outcome varible
 #' @param color_var Name of grouping variable to differtiate by color (if any)
 #' @param shape_var Name of grouping variable to differtiate by shape (if any)
@@ -157,16 +177,20 @@ survestimates <- function(.s, .named_outcome_vec,
 #' @export
 #'
 #' @examples
-#' #' data(ca_school_svy)
+#' data(ca_school_tbl_svy)
 #'
-#' named_outcome_vec <- c(`percent tested` ="pcttest",
-#'                        `free and reduced price lunch`= "meals",
-#'                        `English language learners` = "ell")
+#' named_outcome_vec <- c(`Fully qualified teachers` ="qual.teach.prop",
+#'                        `New students`= "new.stu.prop",
+#'                        `English language learners` = "eng.lang.learn.prop")
 #'
+#' tab <- surv_mean_table(ca_school_tbl_svy, named_outcome_vec,
+#'                        c("poverty", "year.round.sch"),
+#'                        prop.to.pct = T, wrap = F)
 #'
-#' tab <- survestimates(ca_school_svy, named_outcome_vec, comp.imp, stype, wrap = F)
+#' cross_tab_plot(tab, color_var = poverty, shape_var = year.round.sch,
+#'                x_max = 110)
 #'
-#' cross_tab_plot(tab, color_var = comp.imp, shape_var = stype)
+#' rm(tab)
 cross_tab_plot <- function(tab, y_var = outcome, color_var = NULL, shape_var = NULL,
                            dodge = 0.5,
                            order_by_est = T,
@@ -178,6 +202,7 @@ cross_tab_plot <- function(tab, y_var = outcome, color_var = NULL, shape_var = N
                            y_axis_lab = element_blank(),
                            x_scale = "default",
                            color_scheme = "Dark2",
+                           x_min = 0,
                            x_max = NA_real_){
   #message("Check2")
   if(caption == "default"){
@@ -230,7 +255,7 @@ cross_tab_plot <- function(tab, y_var = outcome, color_var = NULL, shape_var = N
   }
 
   if(x_scale == "default"){
-    p <- p + scale_x_continuous(expand = c(0, 0), limits = c(0, x_max))
+    p <- p + scale_x_continuous(expand = c(0, 0), limits = c(x_min, x_max))
   }
   print(p) %>% suppressWarnings()
 }
@@ -238,4 +263,4 @@ cross_tab_plot <- function(tab, y_var = outcome, color_var = NULL, shape_var = N
 
 
 # roxygen2::roxygenise()
-
+# rm(list = ls())

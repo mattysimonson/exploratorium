@@ -11,10 +11,12 @@ LazyData: true
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 Imports: 
-    magrittr
+    magrittr,
+    tidyr,
+    survey,
+    srvyr,
+    ggtext
 Depends: 
     R (>= 2.10),
     dplyr (>= 0.7),
-    survey (>= 3.0),
-    srvyr,
     ggplot2

@@ -14,11 +14,11 @@
 #' @export
 #'
 #' @examples
-#' load("data/ca_school_svy.rda")
-#' ca_school_svy %>% basic_survtable("sch.wide", "comp.imp", "stype")
-basic_survtable <- function(s, ..., binary = F){
+#' data(ca_school_tbl_svy)
+#' ca_school_tbl_svy %>% basic_surv_prop_table("sch.wide.imp.goal", "comparative.imp.goal", "school.level")
+basic_surv_prop_table <- function(s, ..., binary = F){
   fmla <- formula(append("~", paste(c(...), collapse = "+")))
-  tab <- svytable(fmla, s)
+  tab <- survey::svytable(fmla, s)
   nvars <- length(dim(tab))
   out <- tab %>%
     prop.table(margin = 1:(nvars-1)) %>%
@@ -33,8 +33,8 @@ basic_survtable <- function(s, ..., binary = F){
   out
 }
 
-#' An intermediate helper function for survtable
-#' @inheritParams basic_survtable
+#' An intermediate helper function for surv_prop_table
+#' @inheritParams basic_surv_prop_table
 #' @param outcome_vars A character vector naming the column(s) in `s` to be used
 #' as outcomes variable(s). These must be binary or categorial columns in s (convert
 #' beforehand if needed).
@@ -54,28 +54,28 @@ basic_survtable <- function(s, ..., binary = F){
 #' @export
 #'
 #' @examples
-#' load("data/ca_school_svy.rda")
+#' data(ca_school_tbl_svy)
 #' # Multiple grouping variables
-#' ca_school_svy %>%
-#'   intermediate_survtable(outcome_vars = "stype",
-#'                  grouping_vars = c("sch.wide", "comp.imp"))
+#' ca_school_tbl_svy %>%
+#'   intermediate_surv_prop_table(outcome_vars = "school.level",
+#'                  grouping_vars = c("sch.wide.imp.goal", "comparative.imp.goal"))
 #'
 #' # Multiple outcomes
-#' ca_school_svy %>%
-#'  intermediate_survtable(outcome_vars = c("sch.wide", "comp.imp"),
-#'                 grouping_vars = "stype",
+#' ca_school_tbl_svy %>%
+#'  intermediate_surv_prop_table(outcome_vars = c("sch.wide.imp.goal", "comparative.imp.goal"),
+#'                 grouping_vars = "school.level",
 #'                 new_outcome_name = "met_standards")
 #'
 #' # Binary outcome
-#' ca_school_svy %>%
-#'  intermediate_survtable(outcome_vars = "winner",
-#'                 grouping_vars = "stype",
+#' ca_school_tbl_svy %>%
+#'  intermediate_surv_prop_table(outcome_vars = "eligible.for.award",
+#'                 grouping_vars = "school.level",
 #'                 binary = T)
-intermediate_survtable <- function(s, outcome_vars, grouping_vars,
+intermediate_surv_prop_table <- function(s, outcome_vars, grouping_vars,
                        new_outcome_name = "outcome",
                        binary = F){
   out.list <- purrr::map(outcome_vars, ~
-                    basic_survtable(s, as.list(append(grouping_vars, .x)),
+                    basic_surv_prop_table(s, as.list(append(grouping_vars, .x)),
                                 binary = binary)
   )
   if(length(out.list)>1){
@@ -103,70 +103,76 @@ intermediate_survtable <- function(s, outcome_vars, grouping_vars,
 #' a filter column is added to indicated which filter is used on each row
 #' (this allows you to create groups that overlap)
 #'
-#' @inheritParams intermediate_survtable
+#' @inheritParams intermediate_surv_prop_table
 #' @param filter_vars character or character vector with names of
-#' filter varibles. These must be binary columns in s of type logical
-#' (convert beforehand if needed). They will be applied seperately, not
-#' in succession, in order to allow on create more overlapping groups.
-#' Each variable is set to equal T. If more elaborate filtering is
-#' required, use filter( ) beforehand.
+#' filter varibles. These must be binary columns in s of type logical or numeric
+#' (convert beforehand if needed). Values equal to 1 (true) are retained.
+#' They filters will be applied seperately, not in succession,
+#' in order to allow one to create multiple overlapping groups.
+#' If more elaborate filtering is required, use filter( ) beforehand.
 #' @param new_group_name A character with intended name of the column to
 #' hold the names of the filter variables being treated as groups.
 #' Ignored if less than 2 filter_vars.
 #' @param wrap A logical indicating to return html code that will print
 #' the data to the Viewer window in Rstudio for copy and pasting into
 #' other programs.
-#'
 #' @return A long formate tibble, or if wrap = T, a kableExtra table in html.
-#' Each of the initial character columns is named for a grouping variable and
-#' list combination of grouping categories for that row.
-#' The later numeric columns are named for the outcome categories and list the
-#' percentages falling into each. Rows should sum to 100, unless outcome is binary
-#' in which case only the column for "TRUE" is displayed to avoid redudancy.
+#' The intial columns are named for the grouping variables (including new groups
+#' created from multiple outcomes and filters) and list all of a row's group
+#' memberships. The later columns are named for the outcome categories and list the
+#' percentages for each. Rows should sum to 100, unless outcome is binary
+#' in which case only one column is displayed to avoid redudancy.
 #' @export
 #'
 #' @examples
-#' load("data/ca_school_svy.rda")
+#' data(ca_school_tbl_svy)
 #'
-#' # Simple, no groups
-#' ca_school_svy %>%
-#'   survtable(outcome_vars = "stype")
+#' # No groups
+#' ca_school_tbl_svy %>%
+#'   surv_prop_table("poverty")
 #'
-#' # Multiple grouping variables
-#' ca_school_svy %>%
-#'   survtable(outcome_vars = "stype",
-#'                  grouping_vars = c("sch.wide", "comp.imp"))
+# # One grouping
+#' ca_school_tbl_svy %>%
+#'   surv_prop_table("poverty", "size")
 #'
-#' # Multiple outcomes
-#' ca_school_svy %>%
-#'  survtable(outcome_vars = c("sch.wide", "comp.imp"),
-#'                 grouping_vars = "stype",
-#'                 new_outcome_name = "met_standards")
+#' # One grouping, binary outcome (only the "yes" column will be retained)
+#' ca_school_tbl_svy %>%
+#'   surv_prop_table("eligible.for.award", "school.level")
 #'
-#' # Binary outcome
-#' ca_school_svy %>%
-#'  survtable(outcome_vars = "winner",
-#'                 grouping_vars = "stype")
+#' # Multiple groupings
+#' ca_school_tbl_svy %>%
+#'   surv_prop_table(outcome_vars = "poverty",
+#'                  grouping_vars = c("size", "school.level"))
+#'
+#' # Multiple groupings and outcomes
+#' # Note: these outcomes are yes/no variables, so only the "yes" column will be retained
+#' ca_school_tbl_svy %>%
+#'  surv_prop_table(outcome_vars = c("sch.wide.imp.goal", "comparative.imp.goal"),
+#'                 grouping_vars = c("size", "school.level"),
+#'                 new_outcome_name = "standards met")
 #'
 #' # Overlapping groupting variables
-#' ca_school_svy %>%
-#'   mutate(school_wide = sch.wide == "Yes",
-#'          comparable_improvement = comp.imp == "Yes") %>%
-#'  survtable(outcome_vars = "poverty",
-#'            filter_vars = c("school_wide","comparable_improvement"),
-#'            new_group_name = "met_standards")
+#' ca_school_tbl_svy %>%
+#'   mutate(sch.wide.imp.goal = sch.wide.imp.goal == "Yes",
+#'          comparative.imp.goal = comparative.imp.goal == "Yes") %>%
+#'  surv_prop_table(outcome_vars = "poverty",
+#'            filter_vars = c("sch.wide.imp.goal","comparative.imp.goal"),
+#'            new_group_name = "standards met")
 #'
 #' # Delay wrapping in order to modify the output first
-#' ca_school_svy %>%
-#' survtable(outcome_vars = c("sch.wide", "comp.imp"),
-#'                 grouping_vars = "stype",
-#'                 new_outcome_name = "met_standards",
+#' ca_school_tbl_svy %>%
+#'   surv_prop_table(outcome_vars = c("sch.wide.imp.goal", "comparative.imp.goal"),
+#'                 grouping_vars = "school.level",
+#'                 new_outcome_name = "standards met",
 #'                 wrap = F) %>%
-#' mutate(met_standards = recode(met_standards, sch.wide = "school wide",
-#'                               comp.imp = "comparable improvement")) %>%
-#' wrap()
-#' rm(ca_school_svy)
-survtable <- function(s,
+#'  mutate(`standards met` =
+#'           recode(`standards met`,
+#'                  sch.wide.imp.goal = "schoolwide target",
+#'                  comparative.imp.goal = "comparative improvement target")) %>%
+#'   rename(`school level` = school.level) %>%
+#'   wrap()
+#' rm(ca_school_tbl_svy)
+surv_prop_table <- function(s,
                    outcome_vars,
                    grouping_vars = NULL,
                    filter_vars = NULL,
@@ -179,26 +185,26 @@ survtable <- function(s,
     grouping_vars <- "temp_var"
   }
 
-  outcome_type <- s %>%
-    summarise(across(all_of(outcome_vars), class)) %>%
-    pull()
-
-  binary <-  "logical" %in% outcome_type
+  # outcome_type <- s %>%
+  #   summarise(across(all_of(outcome_vars), class)) %>%
+  #   pull()
+  #
+  # binary <-  "logical" %in% outcome_type
 
   if(is.null(filter_vars)){
-    out <- intermediate_survtable(s=s,
+    out <- intermediate_surv_prop_table(s=s,
                                   outcome_vars = outcome_vars,
                                   grouping_vars = grouping_vars,
                                   new_outcome_name = new_outcome_name,
-                                  binary = binary)
+                                  binary = F)
   } else {
     out.list <- purrr::map(filter_vars, ~
-                             intermediate_survtable(
+                             intermediate_surv_prop_table(
                                s = filter(s, .data[[.x]]==T),
                                outcome_vars = outcome_vars,
                                grouping_vars = grouping_vars,
                                new_outcome_name = new_outcome_name,
-                               binary = binary)
+                               binary = F)
     )
 
     if(length(filter_vars)>1){
@@ -213,11 +219,24 @@ survtable <- function(s,
     out <- out %>% select(-temp_var)
   }
 
+  if(out %>% select(where(is.numeric)) %>% ncol() == 2){
+    col_to_drop <- out %>% select(last_col()) %>% colnames()
+
+    if(col_to_drop=="TRUE") col_to_drop <- "FALSE"
+    if(col_to_drop=="Yes") col_to_drop <- "No"
+    if(col_to_drop=="yes") col_to_drop <- "no"
+    if(col_to_drop=="1") col_to_drop <- "0"
+    message(paste("Dropping column:", col_to_drop))
+    out <- out %>%
+      select(!all_of(col_to_drop)) %>%
+      rename(percent = last_col())
+  }
+
   if(wrap){
     out <- wrap(out)
   }
   out
-
 }
 
-# roxygen2::roxygenise()
+# roxygen2::roxygenise();
+# rm(list=ls())
