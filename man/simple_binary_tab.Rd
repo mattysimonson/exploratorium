@@ -27,12 +27,6 @@ Create a table estimating the percentage of "yes" replies to a yes/no survey que
 and the margin of error
 }
 \examples{
-data(api)
-
-my_tbl_svy <- apisrs \%>\% as_survey_design(ids = 1, fpc = fpc)
-
-my_tbl_svy \%>\% mutate(elementary = stype=="E") \%>\%
-    simple_binary_tab(elementary, vartype = "ci")
-
-rm(apiclus1, apiclus2, apipop, apisrs, apistrat, my_tbl_svy)
+load("data/ca_school_svy.rda")
+ca_school_svy \%>\% simple_binary_tab(winner, vartype = "ci")
 }

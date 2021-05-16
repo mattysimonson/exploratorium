@@ -1,13 +1,3 @@
-# This script hold functions that are useful for making crosstab tables and plots
-# By Matthew Simonson
-# Last Updated May 15, 2021
-
-# Status: Go!
-
-# Note: Source this.
-
-# Functions from Elsewhere ------------------------------------------------
-
 #' Convert proportions to percents
 #'
 #' This function converts decimals to precents and rounds them
