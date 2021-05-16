@@ -18,59 +18,74 @@ I will be continuing to make updates until the first CRAN release, so check the 
 
 ### Categorial outcomes: Make a table showing the proportion of every outcome category in each group
 
-In a survey of California school districts in the early 2000s, researchers recorded whether each school's test scores had met the state's standards for improvement.  There were (apparently) two such standards: "school-wide improvement" and "comparative improvement."  Suppose you want to compare what proportion of elementary, middle, and high schools met each type of standard.  School type (elementary/middle/high) is recorded in the `stype` column, while the standards are recorded in the `sch.wide` and `comp.imp` columns respectively. Both standards have the same set of response options ("Yes" and "No"), making them easy to compare. Therefore, we'll stack the results and generate a new column named `met_standards` to indicate what kind of standard was or was not being met.
+The data here comes from a survey of California school districts in the early 2000s.
+What proportion of schools of each size and level had high poverty? Low poverty?
+
+We begin with a `tbl_svy` object created using the `srvyr` package. This basically a `svydesign` object from Thomas Lumley `survey` package, enhanced to allow `tidyverse` operations.
 
 ``` r
 library(exploratorium)
-data(ca_school_svy)
-ca_school_svy %>%
- surv_prop_table(outcome_vars = c("sch.wide", "comp.imp"),
-                grouping_vars = "stype",
-                new_outcome_name = "met_standards")
+data(ca_school_tbl_svy)
+ca_school_tbl_svy %>%
+   surv_prop_table(outcome_vars = "poverty",
+                  grouping_vars = c("size", "school.level"))
 ```
-You can easily copy and paste the output from your viewer screen into Excel, GoogleSheets, or Datawrapper, or save and upload it. It's ready to go! Note that we could have supplied any number of outcome or grouping variables. Now suppose that we would like to compare poverty levels (based on % of students on free and reduced-price lunhc) among school thats the met each type of standard. I could list "poverty" as the `outcome_var` and the two standards as my `grouping_vars`:
+You can easily copy and paste the output from your viewer screen into Excel, GoogleSheets, or Datawrapper, or save and upload it. It's ready to go! Note that we could have supplied any number of outcome or grouping variables. 
+
+Now suppose that we would like to compare poverty levels among schools that either met their schoolwide improvement goal or their comparative improvement goal the previous year. We could list "poverty" as the `outcome_var` and the two standards as `grouping_vars`:
 
 ```
-ca_school_svy %>%
+ca_school_tbl_svy %>%
  surv_prop_table(outcome_vars = "poverty",
-                grouping_vars = c("sch.wide", "comp.imp"))
+                grouping_vars = c("sch.wide.imp.goal", "comparative.imp.goal"))
 ```
-However, I'd like compare the overall poverty rate among the set of all schools with met the School-wide Improvement standard to the set of all school that met the Comparative Improvement standard. Since these group overlap, I'll treat them as `filter_vars`, and then create a new column call `met standards` to indicate which standard was met. Because `filter_vars` retain only values for which as given variable is `TRUE`, I need to tranform these from two variables from "Yes/No" (`factor`) variables into ("True/False") (`logical`) variables.
+This table yieds for rows for each combination of the two goals, which may be helpful in some contexts. However, if we'd like to compare the poverty rates for school that met the schoolwide goal (regardless of whether they met the second goal) to schools that met the second goal (regardless of whether they met the first goal), then we treat both of them as `filter_vars`. The function will filter by one goal first, then the other, retaining observations for which the answer was `TRUE`. Therefore, we must first convert them from `yes/no` to `TRUE/FALSE`.
 
 ```
-ca_school_svy %>%
-  mutate(school_wide = sch.wide == "Yes",
-         comparable_improvement = comp.imp == "Yes") %>%
+ca_school_tbl_svy %>%
+  mutate(sch.wide.imp.goal = sch.wide.imp.goal == "Yes",
+         comparative.imp.goal = comparative.imp.goal == "Yes") %>%
  surv_prop_table(outcome_vars = "poverty",
-           filter_vars = c("school_wide","comparable_improvement"),
-           new_group_name = "met_standards")
+                 filter_vars = c("sch.wide.imp.goal","comparative.imp.goal"))
 ```
 That's all there is to it! 
 
-### Numeric outcomes: Make a table showing the mean every outcome in each group
+### Numeric outcomes: Make a table showing the mean of every outcome in each group
 
-So far we've only been working with outcomes that are categorical or binary. To work with outcomes that are numeric (e.g., to compare the means rather than the proportions across groups) and/or to obtain confidence intervals, use the `surv_mean_table` function. Suppose we'd like to compare several statistics across school types: the average % of students tested, the average % of students on free and reduced price lunch, and the average % of English langauge learners. Since these outcomes are all on the same scale (0-100), they should be easy to compare in a table or graph. First, we need to creat a vector renaming each outcome so it reads the way we'll want it to look in the output.
-
-```
-outcomes <- c(`percent tested` ="pcttest",
-                       `free and reduced price lunch`= "meals",
-                       `English language learners` = "ell")
-```
-
-Then run
+So far we've only been working with outcomes that are categorical or binary. To work with outcomes that are numeric (e.g., to compare the means rather than the proportions across groups), confidence intervals, use the `surv_mean_table` function. Suppose we'd like to compare the mean
+proportions of English-language learners and new students among schools of various sizes and types.
 
 ```
-ca_school_svy %>% surv_mean_table(.named_outcome_vec = outcomes, 
-                                  .grp_var_1 = stype, 
-                                  .proportions = T
-                                  .wrap = F)
-```
-
-Notice that `stype` does not require quotes. In fact, I can enter addition grouping variables without quotes or parenetheses.
+surv_mean_table(ca_school_tbl_svy, 
+                outcome_vars = c("eng.lang.learn.prop", "new.stu.prop"), 
+                grouping_vars = c("school.level", "size"),
+                wrap = T)
 
 ```
-ca_school_svy %>% surv_mean_table(outcomes, stype, sch.wide, comp.imp,
-                                  .proportions = T
-                                  .wrap = F)
+
+It might be nice to rename those outcomes. We can avoid having to type
+the old or new names more than once if we create a named vector. This can be particularly
+useful if we want run multiple tables with the same outcomes but different groups.
+
 ```
-See `?surv_mean_table` for further documentation.
+named_outcome_vec <- c(`New students`= "new.stu.prop",
+                        `English language learners` = "eng.lang.learn.prop")
+                        
+surv_mean_table(ca_school_tbl_svy, 
+                outcome_vars = named_outcome_vec, 
+                grouping_vars = c("school.level", "size"),
+                wrap = T)
+```
+Rather than moving it over to Excel or some other program for plotting, we let `wrap=F` (the default) and can plot the results using the `plot_mean_table` function.
+results if R if we wish the 
+
+```
+surv_mean_table(ca_school_tbl_svy, 
+                outcome_vars = named_outcome_vec, 
+                grouping_vars = c("school.level", "size"),
+                wrap = F) %>% 
+  plot_mean_table(color_var = school.level, shape_var = size)
+                                  
+```
+
+The three main functions in the package `surv_prop_table`, `surv_mean_table`, and `plot_mean_table` all have more examples in their documentation. There are also helper functions like `wrap` and `pct` which may be handy. More updates to come. Good luck! 

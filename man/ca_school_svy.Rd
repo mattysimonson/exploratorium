@@ -8,8 +8,8 @@
 \describe{
 \item{id}{Unique identifier}
 \item{simple.weight}{Sampling Weight}
-\item{year_round_sch}{Whether school runs year-round}
-\item{eligible_for_award}{Whether the schools test score improvements from
+\item{year.round.sch}{Whether school runs year-round}
+\item{eligible.for.award}{Whether the schools test score improvements from
 1999 to 2000 rendered it eligible for an award}
 \item{poverty}{Federally-defined poverty level based on proportion
 of students on free and reduced-price meals}

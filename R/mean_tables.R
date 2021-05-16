@@ -187,11 +187,11 @@ surv_mean_table <- function(s, outcome_vars,
 #'                        c("poverty", "year.round.sch"),
 #'                        prop.to.pct = T, wrap = F)
 #'
-#' cross_tab_plot(tab, color_var = poverty, shape_var = year.round.sch,
+#' plot_mean_table(tab, color_var = poverty, shape_var = year.round.sch,
 #'                x_max = 110)
 #'
 #' rm(tab)
-cross_tab_plot <- function(tab, y_var = outcome, color_var = NULL, shape_var = NULL,
+plot_mean_table <- function(tab, y_var = outcome, color_var = NULL, shape_var = NULL,
                            dodge = 0.5,
                            order_by_est = T,
                            title = NA,
@@ -259,8 +259,6 @@ cross_tab_plot <- function(tab, y_var = outcome, color_var = NULL, shape_var = N
   }
   print(p) %>% suppressWarnings()
 }
-
-
 
 # roxygen2::roxygenise()
 # rm(list = ls())
