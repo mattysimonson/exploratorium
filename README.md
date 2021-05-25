@@ -10,7 +10,7 @@ The goal of exploratorium is to make it easy to conduct exploratory data analysi
 I hope to have the package available on CRAN by the end of the 2021. For now, please install it from GitHub. To do so, will will need to have the `devtools` package installed.
 
 ``` r
-devtools::install_github("exploratorium")
+devtools::install_github("mattysimonson/exploratorium")
 ```
 I will be continuing to make updates until the first CRAN release, so check the change log here. Let me know if any problems or requests by raising an Issue on Github.
 
