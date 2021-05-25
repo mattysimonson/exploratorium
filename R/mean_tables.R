@@ -4,11 +4,12 @@
 #' @param dat A tbl_svy object created using the srvyr package
 #' @param binary_outcome The name of an outcome variable in `dat`. No quotes needed.
 #' @param na.rm A logical indicating whether to drop NAs from the outcome.
+#' @param ci_level A numeric indicating the confidence level. Default it 0.95
 #' @param vartype A string indicting how to display the variance.
 #' See `srvyr::survey_mean()`. "ci" is preferable.
 #'
 #' @return tibble with up to three numeric columns showing point estimate,
-#' and uncertainty (e.g., variance or upper and lower bounds of the 95%
+#' and uncertainty (e.g., variance or upper and lower bounds of a
 #' confidence interval)
 #' @export
 #'
@@ -19,9 +20,11 @@
 #'
 #' rm(ca_school_tbl_svy)
 simple_binary_tab <- function(dat, binary_outcome, na.rm = T,
+                              ci_level = 0.95,
                               vartype = NULL){
   dat %>% summarise(mean = pct(survey_mean({{binary_outcome}},
                                            na.rm = na.rm,
+                                           level = ci_level,
                                            vartype = vartype)))
 }
 
@@ -36,6 +39,7 @@ simple_binary_tab <- function(dat, binary_outcome, na.rm = T,
 #' a named vector, the names are what they variables should be renamed as.
 #' @param grouping_vars Name of factor or character column to group by
 #' @param na.rm A logical indicating whether to drop NAs from output table
+#' @param ci_level A numeric indicating the confidence level. Default it 0.95
 #' @param displayN A logical indicating whether to append the number of
 #' observations to each group's name. Ignored if there are zero or multiple
 #' grouping variables.
@@ -86,10 +90,14 @@ simple_binary_tab <- function(dat, binary_outcome, na.rm = T,
 #' surv_mean_table(ca_school_tbl_svy, named_outcome_vec, c("poverty", "size"),
 #'                  prop.to.pct =T)
 #' rm(ca_school_tbl_svy)
-surv_mean_table <- function(s, outcome_vars,
-                           grouping_vars = NULL,
-                           na.rm = T, displayN = T, prop.to.pct = F,
-                           wrap = F){
+surv_mean_table <- function(s,
+                            outcome_vars,
+                            grouping_vars = NULL,
+                            na.rm = T,
+                            ci_level = 0.95,
+                            displayN = T,
+                            prop.to.pct = F,
+                            wrap = F){
 
   if(!is.null(names(outcome_vars))){
     s <- s %>%
@@ -101,7 +109,7 @@ surv_mean_table <- function(s, outcome_vars,
     group_by(across(all_of(grouping_vars)))
 
   out <- summarise(s, across(all_of(outcome_vars),
-                     ~srvyr::survey_mean(., na.rm=T, vartype = "ci"),
+                     ~srvyr::survey_mean(., na.rm=T, level = ci_level, vartype = "ci"),
                      .names = "{.col}"),
                    n = srvyr::unweighted(n()))
 
@@ -151,24 +159,31 @@ surv_mean_table <- function(s, outcome_vars,
 
 #' Plot multiple outcomes and confidence intervals efficiently
 #'
-#' @param tab A table with columns named est, upp, and low
+#' @param tab A data.frame with columns containing an estimate of the mean,
+#' and upper bound for the CI, and a lower bound for the CI
 #' (for point estimate, upper CI bound, and lower CI bound)
-#' @param y_var Name of outcome varible
+#' @param y_mean Name of column where estimate of mean is stored
+#' @param y_max Name of column where upper bound of CI is stored
+#' @param y_min Name of column where lower bound of CI is stored
+#' @param y_names Name of column where names of outcomes are stored
 #' @param color_var Name of grouping variable to differtiate by color (if any)
 #' @param shape_var Name of grouping variable to differtiate by shape (if any)
 #' @param dodge Numeric indicating the distance between estimates
-#' @param order_by_est Logical determining whether to reorder outcomes accoring to
-#' which was had the higher mean
+#' @param outcome_order Character determining how outcomes should be ordered. Default preserves
+#' the order in which values first appear in the data.frame
 #' @param title A string supplying the title. Often good to standarized half of
 #' it at the top of the section or document and then customize it with paste()
 #' @param subtitle A string supplying the subtitle which is typically the question
 #' stem of survey questions that are being presented as outcomes
-#' @param dates A string supplying the dates of the survey to go in the  caption.
-#' Overridden by `caption`.
-#' @param caption String. Useful if you want one caption for entire section or script.
-#' @param x_axis_lab String w/ desired name of x-axis.
-#' @param y_axis_lab String w/ desired name of y-axis.
-#' @param x_scale String defaulting to "default" in which case the x-axis will
+#' @param dates A string supplying the dates of the survey to go in the caption.
+#' Supplying dates trigger the following format for the captaion:
+#' the words "National Sample, N = XXX, Time Period: `dates`" where the XXX is caluated
+#' by the function
+#' calculates
+#' @param caption A string
+#' @param x_axis_lab  A string w/ desired name of x-axis.
+#' @param y_axis_lab A string w/ desired name of y-axis.
+#' @param x_scale A string defaulting to "default" in which case the x-axis will
 #' go from 0 to `x_max`.
 #' @param color_scheme String supplying the color scheme.
 #' @param x_max Numberic indicating highest deisred value for x-axis
@@ -191,42 +206,61 @@ surv_mean_table <- function(s, outcome_vars,
 #'                x_max = 110)
 #'
 #' rm(tab)
-plot_mean_table <- function(tab, y_var = outcome, color_var = NULL, shape_var = NULL,
-                           dodge = 0.5,
-                           order_by_est = T,
-                           title = NA,
-                           subtitle = NA,
-                           dates = NA,
-                           caption = "default",
-                           x_axis_lab = element_blank(),
-                           y_axis_lab = element_blank(),
-                           x_scale = "default",
-                           color_scheme = "Dark2",
-                           x_min = 0,
-                           x_max = NA_real_){
+plot_mean_table <- function(tab,
+                            y_mean = est,
+                            y_max = upp,
+                            y_min = low,
+                            y_names = outcome,
+                            color_var = NULL,
+                            shape_var = NULL,
+                            dodge = 0.5,
+                            outcome_order = c("in_order", "reverse_order", "by_value", "user_supplied"),
+                            title = NA,
+                            subtitle = NA,
+                            dates = NA,
+                            caption = NA,
+                            reverse_legend = T,
+                            x_axis_lab = element_blank(),
+                            y_axis_lab = element_blank(),
+                            x_scale = "default",
+                            color_scheme = "Dark2",
+                            x_min = 0,
+                            x_max = NA_real_){
   #message("Check2")
-  if(caption == "default"){
+  if(!is.na(dates)){
     temp <- tab %>% group_by({{color_var}}, {{shape_var}}) %>%
       summarise(N = mean(n), .groups= "drop")
     N <- sum(temp$N)
     caption <- paste0("National Sample, N = ", scales::comma_format()(N), ", Time Period: ", dates)
   }
   #message("Check3")
-  if(order_by_est){
-    tab <- tab %>% mutate(y := reorder({{y_var}}, est))
-  } else tab <- tab %>% mutate(y := {{y_var}})
+  if(length(outcome_order)>1) outcome_order <- "in_order"
+
+  if(outcome_order=="in_order"){
+    tab <- tab %>% mutate({{y_names}} := fct_rev(fct_inorder({{y_names}})))
+  }
+  if(outcome_order=="reverse_order"){
+    tab <- tab %>% mutate({{y_names}} := fct_inorder({{y_names}}))
+  }
+  if(outcome_order=="by_value"){
+    tab <- tab %>% mutate({{y_names}} := reorder({{y_names}},{{y_mean}}))
+  }
+
   #message("Check4")
   p <- tab %>% ggplot +
-    geom_pointrange(aes(x = est, y = y,
-                        xmin = low,
-                        xmax = upp,
+    geom_pointrange(aes(x = {{y_mean}},
+                        y = {{y_names}},
+                        xmin = {{y_min}},
+                        xmax = {{y_max}},
                         color = {{color_var}},
                         shape = {{shape_var}}),
-                    position = position_dodge(width = -dodge)) +
-    labs(x = x_axis_lab, y = y_axis_lab,
+                    position = position_dodge(width = dodge)) +
+    labs(x = x_axis_lab,
+         y = y_axis_lab,
          title = title,
          subtitle = subtitle,
          caption = caption) +
+    guides(color = guide_legend(reverse = reverse_legend)) +
     theme_minimal()
 
   if(is.na(title)){
@@ -257,7 +291,7 @@ plot_mean_table <- function(tab, y_var = outcome, color_var = NULL, shape_var = 
   if(x_scale == "default"){
     p <- p + scale_x_continuous(expand = c(0, 0), limits = c(x_min, x_max))
   }
-  print(p) %>% suppressWarnings()
+  p
 }
 
 # roxygen2::roxygenise()

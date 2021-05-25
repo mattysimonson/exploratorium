@@ -5,7 +5,8 @@
 \title{Create a table estimating the percentage of "yes" replies to a yes/no survey question
 and the margin of error}
 \usage{
-simple_binary_tab(dat, binary_outcome, na.rm = T, vartype = NULL)
+simple_binary_tab(dat, binary_outcome, na.rm = T, ci_level = 0.95,
+  vartype = NULL)
 }
 \arguments{
 \item{dat}{A tbl_svy object created using the srvyr package}
@@ -14,12 +15,14 @@ simple_binary_tab(dat, binary_outcome, na.rm = T, vartype = NULL)
 
 \item{na.rm}{A logical indicating whether to drop NAs from the outcome.}
 
+\item{ci_level}{A numeric indicating the confidence level. Default it 0.95}
+
 \item{vartype}{A string indicting how to display the variance.
 See \code{srvyr::survey_mean()}. "ci" is preferable.}
 }
 \value{
 tibble with up to three numeric columns showing point estimate,
-and uncertainty (e.g., variance or upper and lower bounds of the 95%
+and uncertainty (e.g., variance or upper and lower bounds of a
 confidence interval)
 }
 \description{

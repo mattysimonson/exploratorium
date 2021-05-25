@@ -4,18 +4,27 @@
 \alias{plot_mean_table}
 \title{Plot multiple outcomes and confidence intervals efficiently}
 \usage{
-plot_mean_table(tab, y_var = outcome, color_var = NULL,
-  shape_var = NULL, dodge = 0.5, order_by_est = T, title = NA,
-  subtitle = NA, dates = NA, caption = "default",
+plot_mean_table(tab, y_mean = est, y_max = upp, y_min = low,
+  y_names = outcome, color_var = NULL, shape_var = NULL,
+  dodge = 0.5, outcome_order = c("in_order", "reverse_order",
+  "by_value", "user_supplied"), title = NA, subtitle = NA,
+  dates = NA, caption = NA, reverse_legend = T,
   x_axis_lab = element_blank(), y_axis_lab = element_blank(),
   x_scale = "default", color_scheme = "Dark2", x_min = 0,
   x_max = NA_real_)
 }
 \arguments{
-\item{tab}{A table with columns named est, upp, and low
+\item{tab}{A data.frame with columns containing an estimate of the mean,
+and upper bound for the CI, and a lower bound for the CI
 (for point estimate, upper CI bound, and lower CI bound)}
 
-\item{y_var}{Name of outcome varible}
+\item{y_mean}{Name of column where estimate of mean is stored}
+
+\item{y_max}{Name of column where upper bound of CI is stored}
+
+\item{y_min}{Name of column where lower bound of CI is stored}
+
+\item{y_names}{Name of column where names of outcomes are stored}
 
 \item{color_var}{Name of grouping variable to differtiate by color (if any)}
 
@@ -23,8 +32,8 @@ plot_mean_table(tab, y_var = outcome, color_var = NULL,
 
 \item{dodge}{Numeric indicating the distance between estimates}
 
-\item{order_by_est}{Logical determining whether to reorder outcomes accoring to
-which was had the higher mean}
+\item{outcome_order}{Character determining how outcomes should be ordered. Default preserves
+the order in which values first appear in the data.frame}
 
 \item{title}{A string supplying the title. Often good to standarized half of
 it at the top of the section or document and then customize it with paste()}
@@ -32,16 +41,19 @@ it at the top of the section or document and then customize it with paste()}
 \item{subtitle}{A string supplying the subtitle which is typically the question
 stem of survey questions that are being presented as outcomes}
 
-\item{dates}{A string supplying the dates of the survey to go in the  caption.
-Overridden by \code{caption}.}
+\item{dates}{A string supplying the dates of the survey to go in the caption.
+Supplying dates trigger the following format for the captaion:
+the words "National Sample, N = XXX, Time Period: \code{dates}" where the XXX is caluated
+by the function
+calculates}
 
-\item{caption}{String. Useful if you want one caption for entire section or script.}
+\item{caption}{A string}
 
-\item{x_axis_lab}{String w/ desired name of x-axis.}
+\item{x_axis_lab}{A string w/ desired name of x-axis.}
 
-\item{y_axis_lab}{String w/ desired name of y-axis.}
+\item{y_axis_lab}{A string w/ desired name of y-axis.}
 
-\item{x_scale}{String defaulting to "default" in which case the x-axis will
+\item{x_scale}{A string defaulting to "default" in which case the x-axis will
 go from 0 to \code{x_max}.}
 
 \item{color_scheme}{String supplying the color scheme.}

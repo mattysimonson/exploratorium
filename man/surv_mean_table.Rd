@@ -5,7 +5,7 @@
 \title{Create crosstab of means and confidence intervals for numeric outcome(s)}
 \usage{
 surv_mean_table(s, outcome_vars, grouping_vars = NULL, na.rm = T,
-  displayN = T, prop.to.pct = F, wrap = F)
+  ci_level = 0.95, displayN = T, prop.to.pct = F, wrap = F)
 }
 \arguments{
 \item{s}{A \code{tbl_svy} object created with the srvyr package.}
@@ -17,6 +17,8 @@ a named vector, the names are what they variables should be renamed as.}
 \item{grouping_vars}{Name of factor or character column to group by}
 
 \item{na.rm}{A logical indicating whether to drop NAs from output table}
+
+\item{ci_level}{A numeric indicating the confidence level. Default it 0.95}
 
 \item{displayN}{A logical indicating whether to append the number of
 observations to each group's name. Ignored if there are zero or multiple

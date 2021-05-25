@@ -129,27 +129,32 @@ intermediate_surv_prop_table <- function(s, outcome_vars, grouping_vars,
 #'
 #' # No groups
 #' ca_school_tbl_svy %>%
-#'   surv_prop_table("poverty")
+#'   surv_prop_table("poverty",
+#'   wrap = T)
 #'
 # # One grouping
 #' ca_school_tbl_svy %>%
-#'   surv_prop_table("poverty", "size")
+#'   surv_prop_table("poverty", "size",
+#'   wrap = T)
 #'
 #' # One grouping, binary outcome (only the "yes" column will be retained)
 #' ca_school_tbl_svy %>%
-#'   surv_prop_table("eligible.for.award", "school.level")
+#'   surv_prop_table("eligible.for.award", "school.level",
+#'   wrap = T)
 #'
 #' # Multiple groupings
 #' ca_school_tbl_svy %>%
 #'   surv_prop_table(outcome_vars = "poverty",
-#'                  grouping_vars = c("size", "school.level"))
+#'                  grouping_vars = c("size", "school.level"),
+#'                  wrap = T)
 #'
 #' # Multiple groupings and outcomes
 #' # Note: these outcomes are yes/no variables, so only the "yes" column will be retained
 #' ca_school_tbl_svy %>%
 #'  surv_prop_table(outcome_vars = c("sch.wide.imp.goal", "comparative.imp.goal"),
 #'                 grouping_vars = c("size", "school.level"),
-#'                 new_outcome_name = "standards met")
+#'                 new_outcome_name = "standards met",
+#'                 wrap = T)
 #'
 #' # Overlapping groupting variables
 #' ca_school_tbl_svy %>%
@@ -157,7 +162,8 @@ intermediate_surv_prop_table <- function(s, outcome_vars, grouping_vars,
 #'          comparative.imp.goal = comparative.imp.goal == "Yes") %>%
 #'  surv_prop_table(outcome_vars = "poverty",
 #'            filter_vars = c("sch.wide.imp.goal","comparative.imp.goal"),
-#'            new_group_name = "standards met")
+#'            new_group_name = "standards met",
+#'            wrap = T)
 #'
 #' # Delay wrapping in order to modify the output first
 #' ca_school_tbl_svy %>%
@@ -178,7 +184,7 @@ surv_prop_table <- function(s,
                    filter_vars = NULL,
                    new_outcome_name = "outcome",
                    new_group_name = "group",
-                   wrap = T){
+                   wrap = F){
 
   if(is.null(grouping_vars)){
     s <- s %>% mutate(temp_var := 1)
